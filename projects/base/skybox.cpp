@@ -89,9 +89,35 @@ void SkyBox::draw(const glm::mat4& projection, const glm::mat4& view) {
     // TODO:: draw skybox
     // write your code here
     // -----------------------------------------------
-    // ...
+    glDepthFunc(
+        GL_LEQUAL); // Change the depth function to allow depth equal to depth buffer's content
+    _shader->use(); // Use the skybox shader
+
+    // Set the shader uniforms for projection and view matrices
+    _shader->setUniformMat4("projection", projection);
+    _shader->setUniformMat4(
+        "view", glm::mat4(glm::mat3(view))); // Remove translation from the view matrix
+
+    // Bind the vertex array object and active texture
+    glBindVertexArray(_vao);
+    glActiveTexture(GL_TEXTURE0);
+    _texture->bind(); // Bind the cubemap texture
+
+    // Tell the shader where it can find the cubemap
+    _shader->setUniformInt("cubemap", 0);
+
+    // Draw the skybox
+    glDrawArrays(GL_TRIANGLES, 0, 36); // Assuming the skybox is made of 36 vertices (6 faces, 2
+                                        // triangles per face, 3 vertices per triangle)
+
+    // Unbind the vertex array to clean up
+    glBindVertexArray(0);
+    glDepthFunc(GL_LESS); // Restore the default depth test function
+
     // -----------------------------------------------
 }
+
+
 
 void SkyBox::cleanup() {
     if (_vbo != 0) {

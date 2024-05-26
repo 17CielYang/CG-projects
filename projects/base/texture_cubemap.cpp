@@ -47,9 +47,46 @@ ImageTextureCubemap::ImageTextureCubemap(const std::vector<std::string>& filepat
     // hint: you can refer to Texture2D(const std::string&) for image loading
     // write your code here
     // -----------------------------------------------
-    // ...
+    glGenTextures(1, &_handle);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, _handle);
+
+    stbi_set_flip_vertically_on_load(false); // Usually, we don't flip cubemap textures
+
+    int width, height, channels;
+    for (int i = 0; i < 6; i++) {
+        unsigned char* data = stbi_load(filepaths[i].c_str(), &width, &height, &channels, 0);
+        if (!data) {
+            std::cerr << "Failed to load texture at path: " << filepaths[i] << std::endl;
+            throw std::runtime_error("Failed to load cubemap texture from " + filepaths[i]);
+        }
+
+        GLenum format;
+        switch (channels) {
+        case 1: format = GL_RED; break;
+        case 3: format = GL_RGB; break;
+        case 4: format = GL_RGBA; break;
+        default:
+            stbi_image_free(data);
+            throw std::runtime_error("Unsupported image format at " + filepaths[i]);
+        }
+
+        glTexImage2D(
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, width, height, 0, format,
+            GL_UNSIGNED_BYTE, data);
+        stbi_image_free(data);
+    }
+
+    // Set parameters for the cubemap texture
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0); // Unbind the texture
     // -----------------------------------------------
 }
+
 
 ImageTextureCubemap::ImageTextureCubemap(ImageTextureCubemap&& rhs) noexcept
     : TextureCubemap(std::move(rhs)), _uris(std::move(rhs._uris)) {

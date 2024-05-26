@@ -137,31 +137,62 @@ void TextureMapping::initBlendShader() {
     // + lambert shading, i.e the color is affected by the light
     // write your code here
     // -----------------------------------------------------------------
-    const char* fsCode =
-        "#version 330 core\n"
-        "in vec3 fPosition;\n"
-        "in vec3 fNormal;\n"
-        "in vec2 fTexCoord;\n"
-        "out vec4 color;\n"
+    const char* fsCode = R"glsl(
+        #version 330 core
+        in vec3 fPosition;
+        in vec3 fNormal;
+        in vec2 fTexCoord;
+        out vec4 color;
 
-        "struct DirectionalLight {\n"
-        "    vec3 direction;\n"
-        "    vec3 color;\n"
-        "    float intensity;\n"
-        "};\n"
+        struct DirectionalLight {
+            vec3 direction;
+            vec3 color;
+            float intensity;
+        };
 
-        "struct Material {\n"
-        "    vec3 kds[2];\n"
-        "    float blend;\n"
-        "};\n"
+        struct Material {
+            vec3 kds[2];  // base colors for the two textures
+            float blend;  // blend factor between the two textures
+        };
 
-        "uniform Material material;\n"
-        "uniform DirectionalLight light;\n"
-        "uniform sampler2D mapKds[2];\n"
+        uniform Material material;
+        uniform DirectionalLight light;
+        uniform sampler2D mapKds[2];
 
-        "void main() {\n"
-        "    color = vec4(material.kds[0], 1.0f);\n"
-        "}\n";
+        vec3 calcDirectionalLight(vec3 normal, vec3 materialColor) {
+            vec3 lightDir = normalize(-light.direction);
+            float lambertFactor = max(dot(normal, lightDir), 0.0);
+            vec3 diffuse = light.color * materialColor * lambertFactor;
+            return light.intensity * diffuse;
+        }
+
+        void main() {
+            vec3 normal = normalize(fNormal);
+
+            // Fetch base colors from the material
+            vec3 kd1 = material.kds[0];
+            vec3 kd2 = material.kds[1];
+
+            // Fetch colors from both textures
+            vec3 tex1 = texture(mapKds[0], fTexCoord).rgb;
+            vec3 tex2 = texture(mapKds[1], fTexCoord).rgb;
+
+            // Blend each base color with its corresponding texture color
+            vec3 blendTex1 = kd1 * tex1;
+            vec3 blendTex2 = kd2 * tex2;
+
+            // Blend the two resulting colors together
+            vec3 finalBlendedColor = mix(blendTex1, blendTex2, material.blend);
+
+            // Calculate the diffuse color using the final blended color
+            vec3 diffuse = calcDirectionalLight(normal, finalBlendedColor);
+
+            // Set the output color with an alpha of 1.0
+            color = vec4(diffuse, 1.0);
+        }
+
+    )glsl";
+        
     //----------------------------------------------------------------
 
     _blendShader.reset(new GLSLProgram);
@@ -189,21 +220,32 @@ void TextureMapping::initCheckerShader() {
     // hint: use the fTexCoord to determine the color
     // modify your code here
     // --------------------------------------------------------------
-    const char* fsCode =
-        "#version 330 core\n"
-        "in vec2 fTexCoord;\n"
-        "out vec4 color;\n"
+    const char* fsCode = R"glsl(
+        #version 330 core
+        in vec2 fTexCoord;
+        out vec4 color;
 
-        "struct Material {\n"
-        "    vec3 colors[2];\n"
-        "    int repeat;\n"
-        "};\n"
+        struct Material {
+            vec3 colors[2]; // Two colors for the checker pattern
+            int repeat;     // Number of checker repeats across the texture space
+        };
 
-        "uniform Material material;\n"
+        uniform Material material;
 
-        "void main() {\n"
-        "    color = vec4(material.colors[0], 1.0f);\n"
-        "}\n";
+        void main() {
+            // Calculate the checker pattern
+            int checkX = int(fTexCoord.x * float(material.repeat)) % 2;
+            int checkY = int(fTexCoord.y * float(material.repeat)) % 2;
+            int checker = int(checkX == checkY);
+
+            // Choose color based on checker value
+            vec3 chosenColor = mix(material.colors[1], material.colors[0], float(checker));
+
+            // Set the final color output
+            color = vec4(chosenColor, 1.0f);
+        }
+
+    )glsl";
     //----------------------------------------------------------------
 
     _checkerShader.reset(new GLSLProgram);
@@ -276,7 +318,10 @@ void TextureMapping::renderFrame() {
         // 4.3 TODO: enable textures and transform textures to gpu
         // write your code here
         //----------------------------------------------------------------
-        // ...
+        _blendMaterial->mapKds[0]->bind(0);
+        _blendShader->setUniformInt("mapKds[0]", 0);
+        _blendMaterial->mapKds[1]->bind(1);
+        _blendShader->setUniformInt("mapKds[1]", 1); 
         //----------------------------------------------------------------
 
         break;

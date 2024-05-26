@@ -1,4 +1,4 @@
-#include <imgui.h>
+﻿#include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
@@ -107,7 +107,7 @@ void ShadingTutorial::initAmbientShader() {
     _ambientShader->link();
 }
 
-void ShadingTutorial::initLambertShader() {
+void ShadingTutorial::initLambertShader() { 
     const char* vsCode =
         "#version 330 core\n"
         "layout(location = 0) in vec3 aPosition;\n"
@@ -197,16 +197,16 @@ void ShadingTutorial::initLambertShader() {
 void ShadingTutorial::initPhongShader() {
     const char* vsCode =
         "#version 330 core\n"
-        "layout(location = 0) in vec3 aPosition;\n"
-        "layout(location = 1) in vec3 aNormal;\n"
-        "layout(location = 2) in vec2 aTexCoord;\n"
+        "layout(location = 0) in vec3 aPosition;\n" // ����λ��
+        "layout(location = 1) in vec3 aNormal;\n"   // ���㷨��
+        "layout(location = 2) in vec2 aTexCoord;\n" // ��������
 
-        "out vec3 fPosition;\n"
-        "out vec3 fNormal;\n"
+        "out vec3 fPosition;\n" // Ƭ��λ�ã���������ϵ��
+        "out vec3 fNormal;\n"   // ���ߣ���������ϵ��
 
-        "uniform mat4 model;\n"
-        "uniform mat4 view;\n"
-        "uniform mat4 projection;\n"
+        "uniform mat4 model;\n"      // ģ�;���
+        "uniform mat4 view;\n"       // ��ͼ����
+        "uniform mat4 projection;\n" // ͶӰ����
 
         "void main() {\n"
         "    fPosition = vec3(model * vec4(aPosition, 1.0f));\n"
@@ -222,10 +222,105 @@ void ShadingTutorial::initPhongShader() {
     // ------------------------------------------------------------
     const char* fsCode =
         "#version 330 core\n"
+        "in vec3 fPosition;\n"
+        "in vec3 fNormal;\n" // �Ӷ�����ɫ�����ݵķ���
         "out vec4 color;\n"
-        "void main() {\n"
-        "    color = vec4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+
+        "// material data structure declaration\n"
+        "struct Material {\n"
+        "    vec3 ka;\n"  // Ambient coefficient
+        "    vec3 kd;\n"  // Diffuse coefficient
+        "    vec3 ks;\n"  // Specular coefficient
+        "    float ns;\n" // Specular shininess factor
+        "};\n"
+
+        "// ambient light data structure declaration\n"
+        "struct AmbientLight {\n"
+        "    vec3 color;\n"
+        "    float intensity;\n"
+        "};\n"
+
+        "// directional light data structure declaration\n"
+        "struct DirectionalLight {\n"
+        "    vec3 direction;\n"
+        "    float intensity;\n"
+        "    vec3 color;\n"
+        "};\n"
+
+        "// spot light data structure declaration\n"
+        "struct SpotLight {\n"
+        "    vec3 position;\n"
+        "    vec3 direction;\n"
+        "    float intensity;\n"
+        "    vec3 color;\n"
+        "    float angle;\n"
+        "    float kc;\n"
+        "    float kl;\n"
+        "    float kq;\n"
+        "};\n"
+
+        "// uniform variables\n"
+        "uniform Material material;\n"
+        "uniform AmbientLight ambientLight;\n"
+        "uniform DirectionalLight directionalLight;\n"
+        "uniform SpotLight spotLight;\n"
+        "uniform vec3 viewPos;\n" // �۲��ߵ�����ռ����꣬���������λ������
+
+        "vec3 calcDirectionalLight(vec3 normal) {\n" // ��������ƽ�й��������Ч��
+        "    vec3 lightDir = normalize(-directionalLight.direction);\n"
+        "    vec3 diffuse = directionalLight.color * max(dot(lightDir, normal), 0.0f) * "
+        "material.kd;\n"
+        "    return directionalLight.intensity * diffuse ;\n"
+        "}\n"
+
+        "vec3 calcSpotLight(vec3 normal) {\n" // �������Ծ۹�Ƶ�������Ч��
+        "    vec3 lightDir = normalize(spotLight.position - fPosition);\n"
+        "    float theta = acos(-dot(lightDir, normalize(spotLight.direction)));\n"
+        "    if (theta > spotLight.angle) {\n"
+        "        return vec3(0.0f, 0.0f, 0.0f);\n"
+        "    }\n"
+        "    vec3 diffuse = spotLight.color * max(dot(lightDir, normal), 0.0f) * material.kd;\n"
+        "    float distance = length(spotLight.position - fPosition);\n"
+        "    float attenuation = 1.0f / (spotLight.kc + spotLight.kl * distance + spotLight.kq * "
+        "distance * distance);\n"
+        "    return spotLight.intensity * attenuation * diffuse;\n"
+        "}\n"
+
+        "vec3 calcSpecularDirLight(vec3 normal) {\n" // ��������ƽ�й�Դ�ľ��淴��Ч��
+        "    vec3 viewDir = normalize(viewPos - fPosition);\n"
+        "    vec3 reflectDir = reflect(-directionalLight.direction, normal);\n"
+        "    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.ns);\n" // ���㾵�淴��ǿ��
+        "    vec3 specular = directionalLight.intensity * (spec * material.ks);\n"
+        "    return specular;\n"
+        "}\n"
+
+        "vec3 calcSpecularSpotLight(vec3 normal) {\n" // �������Ծ۹�Ƶľ��淴��Ч��
+        "    vec3 viewDir = normalize(viewPos - fPosition);\n"             // �۲췽��
+        "    vec3 lightDir = normalize(spotLight.position - fPosition);\n" // ���߷���
+        "    vec3 reflectDir = reflect(lightDir, normal);\n"               // ���䷽��
+        "    float theta = acos(-dot(lightDir, normalize(spotLight.direction)));\n"
+        "    if(theta > spotLight.angle) {\n"
+        "        return vec3(0.0f, 0.0f, 0.0f);\n" // ����۲췽�򳬳��۹�Ƶ�����Ƕȣ��򲻲������淴��
+        "    }\n"
+        "    float spec = pow(max(dot(viewDir, reflectDir), 0.0f), material.ns);\n" // ���㾵�淴��ǿ��
+        "    vec3 specular = spotLight.color * spec * material.ks;\n"
+        "    float distance = length(spotLight.position - fPosition);\n"
+        "    float attenuation = 1.0f / (spotLight.kc + spotLight.kl * distance + spotLight.kq * "
+        "distance * distance);\n"
+        "    return spotLight.intensity * attenuation * specular;\n"
+        "}\n"
+
+        "void main(){\n"
+        "    vec3 ambient = material.ka * ambientLight.color * ambientLight.intensity;\n"
+        "    vec3 normal = normalize(fNormal);\n"
+        "    vec3 diffuse = calcDirectionalLight(normal) + calcSpotLight(normal);\n"
+        "    vec3 specularDir = calcSpecularDirLight(normal);\n"
+        "    vec3 specularSpot = calcSpecularSpotLight(normal);\n"
+        "    vec3 specular = specularDir + specularSpot;\n"
+        "    vec3 result = ambient + diffuse + specular;\n"
+        "    color = vec4(result, 1.0);\n"
         "}\n";
+
     // ------------------------------------------------------------
 
     _phongShader.reset(new GLSLProgram);
@@ -248,7 +343,7 @@ void ShadingTutorial::renderFrame() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
 
-    switch (_renderMode) {
+    switch (_renderMode) { 
     case RenderMode::Ambient:
         _ambientShader->use();
         // 1. transfer mvp matrix to the shader
@@ -295,18 +390,43 @@ void ShadingTutorial::renderFrame() {
         // ----------------------------------------------------------------
         // _phongShader->set...
         // ----------------------------------------------------------------
+        glm::vec3 cameraPosition = glm::vec3(_camera->getViewMatrix()[3]);
+        _phongShader->setUniformVec3("viewPos", cameraPosition);
 
         // 3. TODO: transfer the material attributes to the shader
         // write your code here
         // -----------------------------------------------------------
         // _phongShader->set...
         // -----------------------------------------------------------
+        _phongShader->setUniformVec3("material.ka", _phongMaterial->ka);
+        _phongShader->setUniformVec3("material.kd", _phongMaterial->kd);
+        _phongShader->setUniformVec3("material.ks", _phongMaterial->ks);
+        _phongShader->setUniformFloat("material.ns", _phongMaterial->ns);
 
         // 4. TODO: transfer the light attributes to the shader
         // write your code here
         // -----------------------------------------------------------
         // _phongShader->set...
         // -----------------------------------------------------------
+        // ambient light
+        _phongShader->setUniformVec3("ambientLight.color", _ambientLight->color);
+        _phongShader->setUniformFloat("ambientLight.intensity", _ambientLight->intensity);
+
+        // directional light
+        _phongShader->setUniformVec3(
+            "directionalLight.direction", _directionalLight->transform.getFront());
+        _phongShader->setUniformVec3("directionalLight.color", _directionalLight->color);
+        _phongShader->setUniformFloat("directionalLight.intensity", _directionalLight->intensity);
+
+        // spot light
+        _phongShader->setUniformVec3("spotLight.position", _spotLight->transform.position);
+        _phongShader->setUniformVec3("spotLight.direction", _spotLight->transform.getFront());
+        _phongShader->setUniformFloat("spotLight.intensity", _spotLight->intensity);
+        _phongShader->setUniformVec3("spotLight.color", _spotLight->color);
+        _phongShader->setUniformFloat("spotLight.angle", _spotLight->angle);
+        _phongShader->setUniformFloat("spotLight.kc", _spotLight->kc);
+        _phongShader->setUniformFloat("spotLight.kl", _spotLight->kl);
+        _phongShader->setUniformFloat("spotLight.kq", _spotLight->kq);
 
         break;
     }
