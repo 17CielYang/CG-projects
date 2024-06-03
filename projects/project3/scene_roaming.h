@@ -8,6 +8,11 @@
 #include "../base/glsl_program.h"
 #include "../base/model.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+
 class SceneRoaming : public Application {
 public:
     SceneRoaming(const Options& options);

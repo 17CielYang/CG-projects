@@ -5,14 +5,14 @@
 #include "instanced_rendering.h"
 
 const std::string planetRelPath = "obj/sphere.obj";
-const std::string asternoidRelPath = "obj/rock.obj";
+const std::string asteroidRelPath = "obj/rock.obj";
 
 InstancedRendering::InstancedRendering(const Options& options) : Application(options) {
     // import models
     _planet.reset(new Model(getAssetFullPath(planetRelPath)));
     _planet->transform.scale = glm::vec3(10.0f, 10.0f, 10.0f);
 
-    _asternoid.reset(new Model(getAssetFullPath(asternoidRelPath)));
+    _asteroid.reset(new Model(getAssetFullPath(asteroidRelPath)));
 
     // init camera
     _camera.reset(new PerspectiveCamera(
@@ -26,7 +26,7 @@ InstancedRendering::InstancedRendering(const Options& options) : Application(opt
     initShaders();
 
     constexpr float radius = 50.0f;
-    constexpr float offset = 10.0f;
+    constexpr float offset = 10.0f; // 设置偏移量、随机大小、随机旋转角度
     for (int i = 0; i < _amount; ++i) {
         glm::mat4 model(1.0f);
         // translate
@@ -55,6 +55,27 @@ InstancedRendering::InstancedRendering(const Options& options) : Application(opt
     // ---------------------------------------------------------
     // glXXX(_instanceBuffer); ...
     // ---------------------------------------------------------
+
+    // configure instanced array
+    // -------------------------
+    glBindVertexArray(_asteroid->getVao()); // Bind the VAO to configure it
+
+    // Create and setup the instance buffer
+    glGenBuffers(1, &_instanceBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, _instanceBuffer);
+    glBufferData(
+        GL_ARRAY_BUFFER, _modelMatrices.size() * sizeof(glm::mat4), _modelMatrices.data(),
+        GL_STATIC_DRAW);
+
+    size_t vec4Size = sizeof(glm::vec4);
+    for (unsigned int i = 0; i < 4; i++) {
+        glEnableVertexAttribArray(3 + i);
+        glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, 4 * vec4Size, (void*)(vec4Size * i));
+        glVertexAttribDivisor(3 + i, 1); // Configure each matrix attribute for instancing
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind the buffer
+    glBindVertexArray(0);             // Unbind the VAO after setup
 
     // init imGUI
     IMGUI_CHECKVERSION();
@@ -123,15 +144,15 @@ void InstancedRendering::initShaders() {
         "    FragColor = vec4(0.8f, 0.8f, 0.8f, 1.0f);\n"
         "}\n";
 
-    _asternoidShader.reset(new GLSLProgram);
-    _asternoidShader->attachVertexShader(asternoidVsCode);
-    _asternoidShader->attachFragmentShader(asternoidFsCode);
-    _asternoidShader->link();
+    _asteroidShader.reset(new GLSLProgram);
+    _asteroidShader->attachVertexShader(asternoidVsCode);
+    _asteroidShader->attachFragmentShader(asternoidFsCode);
+    _asteroidShader->link();
 
-    _asternoidInstancedShader.reset(new GLSLProgram);
-    _asternoidInstancedShader->attachVertexShader(asternoidInstancedVsCode);
-    _asternoidInstancedShader->attachFragmentShader(asternoidFsCode);
-    _asternoidInstancedShader->link();
+    _asteroidInstancedShader.reset(new GLSLProgram);
+    _asteroidInstancedShader->attachVertexShader(asternoidInstancedVsCode);
+    _asteroidInstancedShader->attachFragmentShader(asternoidFsCode);
+    _asteroidInstancedShader->link();
 }
 
 void InstancedRendering::handleInput() {
@@ -186,25 +207,34 @@ void InstancedRendering::renderFrame() {
     // draw asternoids
     switch (_renderMode) {
     case RenderMode::Ordinary:
-        _asternoidShader->use();
-        _asternoidShader->setUniformMat4("view", view);
-        _asternoidShader->setUniformMat4("projection", projection);
+        _asteroidShader->use();
+        _asteroidShader->setUniformMat4("view", view);
+        _asteroidShader->setUniformMat4("projection", projection);
         for (int i = 0; i < _amount; ++i) {
-            _asternoidShader->setUniformMat4("model", _modelMatrices[i]);
-            _asternoid->draw();
+            _asteroidShader->setUniformMat4("model", _modelMatrices[i]);
+            _asteroid->draw();
         }
         break;
     case RenderMode::Instanced:
-        _asternoidInstancedShader->use();
-        _asternoidInstancedShader->setUniformMat4("view", view);
-        _asternoidInstancedShader->setUniformMat4("projection", projection);
+        _asteroidInstancedShader->use();
+        _asteroidInstancedShader->setUniformMat4("view", view);
+        _asteroidInstancedShader->setUniformMat4("projection", projection);
 
-        // TODO: draw the asternoids by the instance rendering method
+        // TODO: draw the asteroids by the instance rendering method
         // write your code here
         // ---------------------------------------------------------
         // ...
         // glDraw...(...);
         // ---------------------------------------------------------
+        glBindVertexArray(_asteroid->getVao()); // Use the VAO from the model
+        glDrawElementsInstanced(
+            GL_TRIANGLES,
+            _asteroid->getIndices().size(), // Use the size of the indices vector
+            GL_UNSIGNED_INT, 
+            0, 
+            _amount
+        );
+        glBindVertexArray(0); // Unbind VAO after drawing
 
         break;
     }

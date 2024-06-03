@@ -25,15 +25,15 @@ private:
     std::unique_ptr<PerspectiveCamera> _camera;
 
     std::unique_ptr<Model> _planet;
-    std::unique_ptr<Model> _asternoid;
+    std::unique_ptr<Model> _asteroid;
 
     std::unique_ptr<GLSLProgram> _planetShader;
-    std::unique_ptr<GLSLProgram> _asternoidShader;
-    std::unique_ptr<GLSLProgram> _asternoidInstancedShader;
+    std::unique_ptr<GLSLProgram> _asteroidShader;
+    std::unique_ptr<GLSLProgram> _asteroidInstancedShader;
 
     GLuint _instanceBuffer = {};
 
-    int _amount = 50000;
+    int _amount = 40000;
     std::vector<glm::mat4> _modelMatrices;
 
     enum RenderMode _renderMode = RenderMode::Ordinary;

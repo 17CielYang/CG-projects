@@ -2,6 +2,9 @@
 
 const std::string modelRelPath = "obj/bunny.obj";
 
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -0.1f);
+glm::vec3 cameraLeft = glm::vec3(-0.1f, 0.0f, 0.0f);
+
 SceneRoaming::SceneRoaming(const Options& options) : Application(options) {
     // set input mode
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -32,10 +35,11 @@ SceneRoaming::SceneRoaming(const Options& options) : Application(options) {
     initShader();
 }
 
+
 void SceneRoaming::handleInput() {
     constexpr float cameraMoveSpeed = 5.0f;
     constexpr float cameraRotateSpeed = 0.02f;
-
+    
     if (_input.keyboard.keyStates[GLFW_KEY_ESCAPE] != GLFW_RELEASE) {
         glfwSetWindowShouldClose(_window, true);
         return;
@@ -58,6 +62,7 @@ void SceneRoaming::handleInput() {
         // -------------------------------------------------
         // camera->transform.position = ...;
         // -------------------------------------------------
+        camera->transform.position += cameraMoveSpeed * cameraFront;
     }
 
     if (_input.keyboard.keyStates[GLFW_KEY_A] != GLFW_RELEASE) {
@@ -67,6 +72,7 @@ void SceneRoaming::handleInput() {
         // -------------------------------------------------
         // camera->transform.position = ...;
         // -------------------------------------------------
+        camera->transform.position += cameraMoveSpeed * cameraLeft;
     }
 
     if (_input.keyboard.keyStates[GLFW_KEY_S] != GLFW_RELEASE) {
@@ -76,6 +82,7 @@ void SceneRoaming::handleInput() {
         // -------------------------------------------------
         // camera->transform.position = ...;
         // -------------------------------------------------
+        camera->transform.position += cameraMoveSpeed * cameraFront * (-1.0f);
     }
 
     if (_input.keyboard.keyStates[GLFW_KEY_D] != GLFW_RELEASE) {
@@ -85,6 +92,7 @@ void SceneRoaming::handleInput() {
         // -------------------------------------------------
         // camera->transform.position = ...;
         // -------------------------------------------------
+        camera->transform.position += cameraMoveSpeed * cameraLeft * (-1.0f);
     }
 
     if (_input.mouse.move.xNow != _input.mouse.move.xOld) {
@@ -96,6 +104,16 @@ void SceneRoaming::handleInput() {
         // -----------------------------------------------------------------------------
         // camera->transform.rotation = ...
         // -----------------------------------------------------------------------------
+        float mouseDeltaX = _input.mouse.move.xNow - _input.mouse.move.xOld;
+
+        // 将鼠标移动量转换为旋转角度
+        float yawAngle = glm::radians((-1.0f) * mouseDeltaX * cameraRotateSpeed);
+
+        // 创建围绕y轴的旋转四元数
+        glm::quat yawRotation = glm::angleAxis(yawAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        // 作用旋转矩阵
+        camera->transform.rotation *= yawRotation;
     }
 
     if (_input.mouse.move.yNow != _input.mouse.move.yOld) {
@@ -107,6 +125,17 @@ void SceneRoaming::handleInput() {
         // -----------------------------------------------------------------------------
         // camera->transform.rotation = ...
         // -----------------------------------------------------------------------------
+        float mouseDeltaY = _input.mouse.move.yNow - _input.mouse.move.yOld;
+
+        // 将鼠标移动量转换为旋转角度
+        float pitchAngle = glm::radians((-1.0f) * mouseDeltaY * cameraRotateSpeed);
+
+        // 创建围绕x轴的旋转四元数
+        glm::quat pitchRotation =
+            glm::angleAxis(pitchAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+
+        // 作用旋转矩阵
+        camera->transform.rotation *= pitchRotation;
     }
 
     _input.forwardState();
