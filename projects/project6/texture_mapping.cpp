@@ -177,17 +177,14 @@ void TextureMapping::initBlendShader() {
             vec3 tex1 = texture(mapKds[0], fTexCoord).rgb;
             vec3 tex2 = texture(mapKds[1], fTexCoord).rgb;
 
-            // Blend each base color with its corresponding texture color
+            // Blend base color with texture color
             vec3 blendTex1 = kd1 * tex1;
             vec3 blendTex2 = kd2 * tex2;
 
-            // Blend the two resulting colors together
+            // Blend the two resulting colors
             vec3 finalBlendedColor = mix(blendTex1, blendTex2, material.blend);
 
-            // Calculate the diffuse color using the final blended color
             vec3 diffuse = calcDirectionalLight(normal, finalBlendedColor);
-
-            // Set the output color with an alpha of 1.0
             color = vec4(diffuse, 1.0);
         }
 
@@ -236,15 +233,14 @@ void TextureMapping::initCheckerShader() {
             // Calculate the checker pattern
             int checkX = int(fTexCoord.x * float(material.repeat)) % 2;
             int checkY = int(fTexCoord.y * float(material.repeat)) % 2;
-            int checker = int(checkX == checkY);
-
-            // Choose color based on checker value
-            vec3 chosenColor = mix(material.colors[1], material.colors[0], float(checker));
-
-            // Set the final color output
+            vec3 chosenColor;
+            if(checkX == checkY){
+                chosenColor = material.colors[1];
+            }else{
+                chosenColor = material.colors[0];
+            }
             color = vec4(chosenColor, 1.0f);
         }
-
     )glsl";
     //----------------------------------------------------------------
 

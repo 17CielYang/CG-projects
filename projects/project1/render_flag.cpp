@@ -1,4 +1,4 @@
-#include "render_flag.h"
+﻿#include "render_flag.h"
 
 RenderFlag::RenderFlag(const Options& options) : Application(options) {
     // create star shader
@@ -25,8 +25,22 @@ RenderFlag::RenderFlag(const Options& options) : Application(options) {
     // hint: aspect_of_the_window = _windowWidth / _windowHeight
     // write your code here
     // ---------------------------------------------------------------
-    // _stars[i].reset(new Star(ndc_position, rotation_in_radians, size_of_star,
-    // aspect_of_the_window));
+    float aspect_ratio = static_cast<float> (_windowWidth) / _windowHeight;
+    float streched = aspect_ratio * 2.0 / 3.0;
+
+    std::vector<std::pair<glm::vec2, float>> starSettings = {
+        {{-2.0 / 3.0 / streched, 0.5},                          0},
+        {{-1.0 / 3.0 / streched, 0.8}, -M_PI / 2 - 0.540319500271},
+        {      {-0.2 / streched, 0.6}, -M_PI / 2 - 0.165148677415},
+        {      {-0.2 / streched, 0.3},             -1.29249666779},
+        {{-1.0 / 3.0 / streched, 0.1},            -0.896055384571}
+    };
+
+    for (size_t i = 0; i < starSettings.size(); i++) {
+        float radius = (i == 0 ? 0.3 : 0.1);
+        _stars[i].reset(
+            new Star(starSettings[i].first, starSettings[i].second, radius, aspect_ratio));
+    }
     // ---------------------------------------------------------------
 }
 

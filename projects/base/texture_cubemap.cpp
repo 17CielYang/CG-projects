@@ -50,7 +50,7 @@ ImageTextureCubemap::ImageTextureCubemap(const std::vector<std::string>& filepat
     glGenTextures(1, &_handle);
     glBindTexture(GL_TEXTURE_CUBE_MAP, _handle);
 
-    stbi_set_flip_vertically_on_load(false); // Usually, we don't flip cubemap textures
+    stbi_set_flip_vertically_on_load(false); 
 
     int width, height, channels;
     for (int i = 0; i < 6; i++) {
@@ -76,7 +76,6 @@ ImageTextureCubemap::ImageTextureCubemap(const std::vector<std::string>& filepat
         stbi_image_free(data);
     }
 
-    // Set parameters for the cubemap texture
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

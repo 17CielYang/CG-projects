@@ -1,4 +1,4 @@
-#include "star.h"
+﻿#include "star.h"
 #include <cmath>
 
 Star::Star(const glm::vec2& position, float rotation, float radius, float aspect)
@@ -6,10 +6,24 @@ Star::Star(const glm::vec2& position, float rotation, float radius, float aspect
     // TODO: assemble the vertex data of the star
     // write your code here
     // -------------------------------------
-    // for (int i = 0; i < 5; ++i) {
-    //     _vertices.push_back( ... );
-    // }
+    float cur_rotation = rotation, cur_inner_rotation;
+    float inner_radius = radius / 2.61803;
+    const float angle_increment = M_PI / 5;
+    for (int i = 0; i < 5; ++i) {
+        _vertices.push_back(glm::vec2(
+            position.x + radius * sin(cur_rotation) / aspect,
+            position.y + radius * cos(cur_rotation)));
+        cur_inner_rotation = cur_rotation + angle_increment* 3;
+        _vertices.push_back(glm::vec2(
+            position.x + inner_radius * sin(cur_inner_rotation) / aspect,
+            position.y + inner_radius * cos(cur_inner_rotation)));
+        cur_inner_rotation += angle_increment * 4;
+        _vertices.push_back(glm::vec2(
+            position.x + inner_radius * sin(cur_inner_rotation) / aspect,
+            position.y + inner_radius * cos(cur_inner_rotation)));
+        cur_rotation += 2 * angle_increment;
     // -------------------------------------
+    }
 
     glGenVertexArrays(1, &_vao);
     glGenBuffers(1, &_vbo);
